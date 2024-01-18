@@ -170,7 +170,7 @@ function addEmployee(){
       {
         type: "input",
         name: "manager_id",
-        message: "Please enter the employee's manager ID:",
+        message: "Please enter the employee's manager ID (please enter NULL if not applicable):",
       },
     ])
     .then((response) => {
@@ -188,32 +188,72 @@ function addEmployee(){
     });
 }
 
-
 function updateEmployeeRole(){
-    const employeeList = db.query(`SELECT id, CONCAT(first_name, " ", last_name) AS fullname FROM employee;`);
-    inquirer
-    .prompt([
-      {
-        type: "list",
-        name: "employee_name",
-        message: "Which employee's role would you like to update?",
-        choices: [
-            employeeList
-        ]
-      },
-      {
-        type: "list",
-        name: "lname",
-        message: "Which role would you like to assign to the selected employee?",
-        choices: [
+  db.query(`SELECT id, CONCAT(first_name, " ", last_name) AS fullname FROM employee;`, function (err, results) {
+  if (err){
+      console.log("Unable to retrieve the department table.");
+      return options();
+  }
+  let nameList = [];
 
-        ]
-      },
-    ])
-    .then((response) => {
+  for (let i=0; i < results.length; i++){
+    let nameResult = results[i];
+    let nameValue = nameResult["fullname"];
+    nameList.push(nameValue);
+  }
 
-        });
-    };
+  console.log(nameList);
+
+  inquirer
+  .prompt([
+    {
+      type: "list",
+      name: "employee_name",
+      message: "Which employee's role would you like to update?",
+      choices: nameList
+    },
+  ]).then((response) => {
+      console.log(response);
+    }
+  )
+})};
+
+
+// function updateEmployeeRole(){
+  
+//     const employeeList = db.query(`SELECT id, CONCAT(first_name, " ", last_name) AS fullname FROM employee;`);
+//     console.log(employeeList);
+//     inquirer
+//     .prompt([
+//       {
+//         type: "list",
+//         name: "employee_name",
+//         message: "Which employee's role would you like to update?",
+//         choices: [
+//           employeeList
+//         ]
+//       },
+//       {
+//         type: "list",
+//         name: "lname",
+//         message: "Which role would you like to assign to the selected employee?",
+//         choices: [
+
+//         ]
+//       },
+//     ])
+//     .then((response) => {
+//           if (err) {
+//             console.log("Unable to update the employee.");
+//             console.log(err)
+//             return options();
+//           } else {
+//             console.table()
+//             console.log("Successfully updated the employee!");
+//             return options();
+//           }
+//         });
+//     };
 
 function exit(){
     console.log(`Thank you for visiting ABC company's database. See you next time!`)
