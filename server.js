@@ -1,7 +1,9 @@
+// Include the packages/module required for this application 
 const inquirer = require("inquirer");
 const mysql = require('mysql2');
 const cTable = require('console.table');
 
+// Creates connection with my local database
 const db = mysql.createConnection(
     {
       host: 'localhost',
@@ -12,7 +14,7 @@ const db = mysql.createConnection(
     console.log(`Connected to the abccompany_db database.`)
   );
 
-
+// Creates an array of questions for user input
 function options() {
   inquirer
     .prompt([
@@ -32,6 +34,7 @@ function options() {
         ],
       },
     ])
+    // Calls the corresponding function based on user's choice
     .then((response) => {
         if (response.menu == "View all departments") {
           viewAllDepartment();
@@ -53,6 +56,7 @@ function options() {
     });
 }
 
+// Retrieves all the data from the department table
 function viewAllDepartment(){
       db.query('SELECT * FROM department;', function (err, results) {
         if (err){
@@ -65,8 +69,9 @@ function viewAllDepartment(){
 
 }
 
+// Retrieves and joins the data from the role table and the department table
 function viewAllRoles(){
-    db.query('SELECT * FROM role;', function (err, results) {
+    db.query('SELECT role.id, role.title, department.name AS department, role.salary FROM role JOIN department on role.department_id = department.id;', function (err, results) {
         if (err){
             console.log("Unable to retrieve the role table.");
             return options();
@@ -76,9 +81,10 @@ function viewAllRoles(){
     });
 }
 
+// Retrieves and joins the data from the employee table, the role table, and the department table
 function viewAllEmployees() {
   db.query(
-    `SELECT employee.first_name, employee.last_name, role.title, role.salary, department.name, employee.manager_id
+    `SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.name AS department, employee.manager_id
     FROM department
     JOIN role ON department.id = role.department_id
     JOIN employee ON role.id = employee.role_id;`,
@@ -93,6 +99,7 @@ function viewAllEmployees() {
   );
 }
 
+// Adds a new department based on user's input
 function addDepartment(){
   inquirer
     .prompt({
@@ -115,6 +122,7 @@ function addDepartment(){
     });
 }
 
+// Adds a new role based on user's inputs
 function addRole(){
     inquirer
     .prompt([
@@ -149,6 +157,7 @@ function addRole(){
     });
 }
 
+// Adds a new employee based on user's inputs
 function addEmployee(){
     inquirer
     .prompt([
@@ -188,86 +197,94 @@ function addEmployee(){
     });
 }
 
+// Updates an employee's role
 function updateEmployeeRole(){
-  db.query(`SELECT id, CONCAT(first_name, " ", last_name) AS fullname FROM employee;`, function (err, results) {
-  if (err){
-      console.log("Unable to retrieve the department table.");
-      return options();
-  }
-  let nameList = [];
-
-  for (let i=0; i < results.length; i++){
-    let nameResult = results[i];
-    let nameValue = nameResult["fullname"];
-    nameList.push(nameValue);
-  }
-
-  console.log(nameList);
-
-  inquirer
-  .prompt([
-    {
-      type: "list",
-      name: "employee_name",
-      message: "Which employee's role would you like to update?",
-      choices: nameList
-    },
-  ]).then((response) => {
-      console.log(response);
+  // Get all the required data from db
+  db.query(`SELECT CONCAT(first_name, " ", last_name) AS fullname FROM employee;`, function (err, employeeNames) {
+    if (err){
+      console.log("Unable to retrieve the data.");
+      return;
     }
-  )
-})};
+    db.query(`SELECT id FROM employee;`, function (err, employeeIds) {
+      if (err){
+        console.log("Unable to retrieve the data.");
+        return;
+      }
+      db.query(`SELECT title FROM role;`, function (err, roleTitles) {
+        if (err){
+          console.log("Unable to retrieve the data.");
+          return;
+        }
+        db.query(`SELECT id FROM role;`, function (err, roleIds) {
+          if (err){
+            console.log("Unable to retrieve the data.");
+            return;
+          }
+          
+          // Loops through the data got above and creates new arrays with the values got by the keys 
+          let employeeList = employeeNames.map((employeeName) => {
+            return employeeName.fullname;
+          })
+          
+          let employeeIdList = employeeIds.map((employeeId)=> {
+            return employeeId.id;
+          })
 
+          let titleList = roleTitles.map((roleTitle) =>{
+            return roleTitle.title;
+          })
 
-// function updateEmployeeRole(){
-  
-//     const employeeList = db.query(`SELECT id, CONCAT(first_name, " ", last_name) AS fullname FROM employee;`);
-//     console.log(employeeList);
-//     inquirer
-//     .prompt([
-//       {
-//         type: "list",
-//         name: "employee_name",
-//         message: "Which employee's role would you like to update?",
-//         choices: [
-//           employeeList
-//         ]
-//       },
-//       {
-//         type: "list",
-//         name: "lname",
-//         message: "Which role would you like to assign to the selected employee?",
-//         choices: [
-
-//         ]
-//       },
-//     ])
-//     .then((response) => {
-//           if (err) {
-//             console.log("Unable to update the employee.");
-//             console.log(err)
-//             return options();
-//           } else {
-//             console.table()
-//             console.log("Successfully updated the employee!");
-//             return options();
-//           }
-//         });
-//     };
+          let roleIdList = roleIds.map ((roleId) => {
+            return roleId.id;
+          })
+            inquirer
+            .prompt([
+              {
+                type: "list",
+                name: "employee_name",
+                message: "Which employee's role would you like to update?",
+                choices: employeeList,
+              },
+              {
+                type: "list",
+                name: "employee_id",
+                message: "What is the employee id of the employee?",
+                choices: employeeIdList,
+              },
+              {
+                type: "list",
+                name: "role_title",
+                message:"Which role would you like to assign to the selected employee?",
+                choices: titleList,
+              },
+              {
+                type: "list",
+                name: "role_id",
+                message: "What is the role id that you like to assign to the selected employee?",
+                choices: roleIdList,
+              },
+            ])
+            .then((response) => {
+              const { employee_name, employee_id, role_title, role_id } = response;
+              db.query(`UPDATE employee SET role_id = ${role_id} WHERE id = ${employee_id} ;`, function (err, results) {
+                  if (err) {
+                    console.log("Unable to update the employee.");
+                    console.log(err)
+                    return options();
+                  } else {
+                    console.log("Successfully updated the employee!");
+                    return options();
+                  }
+                });
+            });
+          });
+        });
+      });
+    });
+  };        
 
 function exit(){
     console.log(`Thank you for visiting ABC company's database. See you next time!`)
 }
-
-// async function viewAllDepartment(){
-//     try {
-//         const allDepartment = await db.query('SELECT * FROM department;').then((err,res)=>{
-//             console.table(allDepartment);
-//         });
-//     } catch (err) {
-//          console.error(err)
-//     }
-//     options();
-// }
 
 options();
